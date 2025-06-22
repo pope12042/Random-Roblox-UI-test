@@ -6,11 +6,11 @@ Just a test
 
 Booting the library:
 loadstring(game:HttpGet("https://raw.githubusercontent.com/pope12042/Random-Roblox-UI-test/refs/heads/main/Boot.txt"))()
-
-
+.
+.
 fixed link : https://raw.githubusercontent.com/pope12042/Random-Roblox-UI-test/refs/heads/main/Boot.txt
-
-
+.
+.
 creating a window:
 --!strict
 --[[
@@ -73,10 +73,10 @@ local infoLabel = UI.new("Label", windowContentParent, {
 })
 
 print("UI Library Example Loaded with a simple window!")
-
-
-
-
+.
+.
+.
+.
 creating a tab:
 --!strict
 --[[
@@ -205,10 +205,10 @@ myTextBox:OnEnterPressed(function(text)
 end)
 
 print("Library Booter loaded UI from Asset ID and created example UI!")
-
-
-
-
+.
+.
+.
+.
 creating a button:
 local Plr, UI = game:GetService("Players"), require(game.StarterPlayer.StarterPlayerScripts.UI.UI)
 local SG = Plr.LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("MyCustomUIScreen") or Instance.new("ScreenGui")
