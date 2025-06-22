@@ -9,8 +9,8 @@ loadstring(game:HttpGet("https://raw.githubusercontent.com/pope12042/Random-Robl
 .
 .
 fixed link : https://raw.githubusercontent.com/pope12042/Random-Roblox-UI-test/refs/heads/main/Boot.txt
-.
-.
+.o
+
 creating a window:
 --!strict
 --[[
@@ -73,10 +73,10 @@ local infoLabel = UI.new("Label", windowContentParent, {
 })
 
 print("UI Library Example Loaded with a simple window!")
-.
-.
-.
-.
+.o
+.o
+.i
+
 creating a tab:
 --!strict
 --[[
@@ -205,10 +205,10 @@ myTextBox:OnEnterPressed(function(text)
 end)
 
 print("Library Booter loaded UI from Asset ID and created example UI!")
-.
-.
-.
-.
+.ignore this
+.ignore this
+.ignore this
+
 creating a button:
 local Plr, UI = game:GetService("Players"), require(game.StarterPlayer.StarterPlayerScripts.UI.UI)
 local SG = Plr.LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("MyCustomUIScreen") or Instance.new("ScreenGui")
