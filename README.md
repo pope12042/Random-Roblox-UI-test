@@ -12,67 +12,535 @@ fixed link : https://raw.githubusercontent.com/pope12042/Random-Roblox-UI-test/r
 
 
 creating a window:
---!strict
---[[
-    UI_Library_Example.lua
+    --!strict
+    --[[
+        UI_Library_Consolidated.lua
 
-    UPDATED: Removed the TextBox demonstration, keeping only the
-    basic "Developer Docs" style window frame.
-    Place this script directly inside StarterPlayerScripts.
---]]
+        FINAL VERSION: This is the complete, consolidated UI library.
+        Copy this ENTIRE code block into a NEW ModuleScript in Roblox Studio.
+        Then, right-click that ModuleScript and "Save to Roblox..." to get its Asset ID.
+    --]]
 
-local Players = game:GetService("Players")
-local PlayerGui = Players.LocalPlayer:WaitForChild("PlayerGui")
-local TweenService = game:GetService("TweenService") -- Still useful if you add animations later
+    -- Services (defined once for the entire consolidated library)
+    local TweenService = game:GetService("TweenService")
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
 
--- Require the core UI library module
--- If using the consolidated booter, this would be:
--- local UI = require(YOUR_UI_LIBRARY_ASSET_ID)
-local UI = require(game.StarterPlayer.StarterPlayerScripts.UI.UI)
+    -- === BaseComponent Module ===
+    local BaseComponent = {}
+    BaseComponent.__index = BaseComponent
+
+    local DEFAULT_BASE_PROPERTIES = {
+        Position = UDim2.new(0, 0, 0, 0),
+        Size = UDim2.new(0, 100, 0, 50),
+        BackgroundColor3 = Color3.fromRGB(60, 60, 60),
+        BackgroundTransparency = 0,
+        BorderSizePixel = 0,
+        Visible = true,
+        ZIndex = 1,
+        AnchorPoint = Vector2.new(0, 0),
+        ClipsDescendants = true,
+
+        Text = "",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        Font = Enum.Font.SourceSansBold,
+        TextSize = 16,
+        TextScaled = false,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        TextWrapped = false,
+        TextTransparency = 0,
+
+        CornerRadius = UDim.new(0, 0),
+        Padding = nil,
+
+        StrokeColor = nil,
+        StrokeTransparency = 0,
+        StrokeThickness = 1,
+        StrokeLineJoinMode = Enum.LineJoinMode.Miter,
+
+        GradientColor = nil,
+        GradientRotation = 0,
+        GradientOffset = Vector2.new(0, 0),
+
+        Draggable = false,
+    }
+
+    function BaseComponent.new(instanceType: Enum.StudioPluginSetting, parent: GuiObject, props: { [string]: any }): (any)
+        local self = setmetatable({}, BaseComponent)
+        local instance = Instance.new(instanceType.Name)
+        instance.Parent = parent
+        self._instance = instance
+
+        local finalProps = {}
+        for propName, defaultValue in pairs(DEFAULT_BASE_PROPERTIES) do
+            finalProps[propName] = defaultValue
+        end
+        for propName, value in pairs(props) do
+            finalProps[propName] = value
+        end
+
+        for propName, value in pairs(finalProps) do
+            if propName == "Padding" and value ~= nil then
+                local padding = Instance.new("UIPadding")
+                if typeof(value) == "table" then
+                    padding.PaddingLeft = value.Left or UDim.new(0,0)
+                    padding.PaddingRight = value.Right or UDim.new(0,0)
+                    padding.PaddingTop = value.Top or UDim.new(0,0)
+                    padding.PaddingBottom = value.Bottom or UDim.new(0,0)
+                else
+                    padding.PaddingLeft = value
+                    padding.PaddingRight = value
+                    padding.PaddingTop = value
+                    padding.PaddingBottom = value
+                end
+                padding.Parent = instance
+            elseif propName == "CornerRadius" and (value.Scale ~= 0 or value.Offset ~= 0) then
+                local uiCorner = Instance.new("UICorner")
+                uiCorner.CornerRadius = value
+                uiCorner.Parent = instance
+            elseif propName == "StrokeColor" and value ~= nil then
+                local uiStroke = Instance.new("UIStroke")
+                uiStroke.Color = value
+                uiStroke.Transparency = finalProps.StrokeTransparency
+                uiStroke.Thickness = finalProps.StrokeThickness
+                uiStroke.LineJoinMode = finalProps.StrokeLineJoinMode
+                uiStroke.Parent = instance
+            elseif propName == "GradientColor" and value ~= nil then
+                local uiGradient = Instance.new("UIGradient")
+                uiGradient.Color = value
+                uiGradient.Rotation = finalProps.GradientRotation
+                uiGradient.Offset = finalProps.GradientOffset
+                uiGradient.Parent = instance
+            elseif instance[propName] ~= nil then
+                if propName == "Font" and typeof(value) == "EnumItem" and value.ClassName == "EnumItem" then
+                    instance.Font = value
+                else
+                    instance[propName] = value
+                end
+            end
+        end
+
+        self._draggable = finalProps.Draggable
+        return self
+    end
+
+    function BaseComponent:GetInstance(): GuiObject
+        return self._instance
+    end
+
+    function BaseComponent:SetProperty(propName: string, value: any)
+        if self._instance[propName] ~= nil then
+            self._instance[propName] = value
+        else
+            warn("SetProperty: Property '" .. propName .. "' does not exist on " .. self._instance.ClassName)
+        end
+    end
+
+    function BaseComponent:SetPosition(pos: UDim2) self._instance.Position = pos end
+    function BaseComponent:SetSize(size: UDim2) self._instance.Size = size end
+    function BaseComponent:SetBackgroundColor(color: Color3) self._instance.BackgroundColor3 = color end
+    function BaseComponent:SetBackgroundTransparency(transparency: number) self._instance.BackgroundTransparency = transparency end
+    function BaseComponent:SetText(text: string)
+        if self._instance:IsA("TextLabel") or self._instance:IsA("TextButton") or self._instance:IsA("TextBox") then
+            self._instance.Text = text
+        else warn("SetText called on a non-text component:", self._instance.ClassName) end
+    end
+    function BaseComponent:SetTextColor(color: Color3)
+        if self._instance:IsA("TextLabel") or self._instance:IsA("TextButton") or self._instance:IsA("TextBox") then
+            self._instance.TextColor3 = color
+        else warn("SetTextColor called on a non-text component:", self._instance.ClassName) end
+    end
+    function BaseComponent:SetFont(font: Enum.Font)
+        if self._instance:IsA("TextLabel") or self._instance:IsA("TextButton") or self._instance:IsA("TextBox") then
+            self._instance.Font = font
+        else warn("SetFont called on a non-text component:", self._instance.ClassName) end
+    end
+    function BaseComponent:SetTextSize(size: number)
+        if self._instance:IsA("TextLabel") or self._instance:IsA("TextButton") or self._instance:IsA("TextBox") then
+            self._instance.TextSize = size
+        else warn("SetTextSize called on a non-text component:", self._instance.ClassName) end
+    end
+    function BaseComponent:SetVisible(visible: boolean) self._instance.Visible = visible end
+
+    function BaseComponent:Destroy()
+        self._instance:Destroy()
+        for i, v in pairs(self) do self[i] = nil end
+        setmetatable(self, nil)
+    end
+    -- === End BaseComponent Module ===
 
 
--- Create a ScreenGui for our UI elements if it doesn't exist.
-local screenGui = PlayerGui:FindFirstChild("MyCustomUIScreen")
-if not screenGui then
-    screenGui = Instance.new("ScreenGui")
-    screenGui.Name = "MyCustomUIScreen"
-    screenGui.DisplayOrder = 10
-    screenGui.ResetOnSpawn = false
-    screenGui.Parent = PlayerGui
-end
+    -- === Button Module ===
+    local Button = {}
+    Button.__index = Button
+    setmetatable(Button, BaseComponent)
 
--- Initialize the UI library with the ScreenGui
-UI.init(screenGui)
+    local DEFAULT_BUTTON_PROPERTIES = {
+        Size = UDim2.new(0, 120, 0, 40),
+        BackgroundColor3 = Color3.fromRGB(75, 150, 255),
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        Text = "Button",
+        CornerRadius = UDim.new(0, 6),
+        AutoButtonColor = false,
+        StrokeColor = Color3.fromRGB(40, 40, 40),
+        StrokeThickness = 1,
+    }
 
--- --- Create a Draggable Window (Developer Docs style) ---
-local devDocsWindow = UI.new("Window", nil, {
-    Title = "Developer Docs",
-    Size = UDim2.new(0, 400, 0, 350),
-    Position = UDim2.new(0.5, -200, 0.5, -175), -- Centered
-    BackgroundColor3 = Color3.fromRGB(35, 35, 35),
-    CornerRadius = UDim.new(0, 10),
-    StrokeColor = Color3.fromRGB(20, 20, 20),
-    StrokeThickness = 1,
-    Padding = UDim.new(0, 0), -- No padding on main window
-})
+    function Button.new(parent: GuiObject, props: { [string]: any }): (any)
+        local mergedProps = {}
+        for k, v in pairs(DEFAULT_BUTTON_PROPERTIES) do mergedProps[k] = v end
+        for k, v in pairs(props) do mergedProps[k] = v end
 
--- You can add other content here using UI.new(...)
--- For now, this window will be mostly empty except for its title bar.
-local windowContentParent = devDocsWindow:GetInstance()
+        local self = BaseComponent.new(Enum.Class.TextButton, parent, mergedProps)
+        setmetatable(self, Button)
 
--- Example: Add a simple label to confirm the window is there
-local infoLabel = UI.new("Label", windowContentParent, {
-    Text = "This is a custom window!",
-    Size = UDim2.new(1, -20, 0, 30),
-    Position = UDim2.new(0, 10, 0, devDocsWindow.TitleBar.Size.Y.Offset + 15),
-    TextXAlignment = Enum.TextXAlignment.Center,
-    TextColor3 = Color3.fromRGB(255, 255, 255),
-    Font = Enum.Font.SourceSansBold,
-    TextSize = 20,
-    BackgroundTransparency = 1,
-})
+        self._instance.MouseButton1Click:Connect(function()
+            if self.onClick then
+                self.onClick()
+            end
+        end)
 
-print("UI Library Example Loaded with a simple window!")            
+        return self
+    end
+
+    function Button:OnClick(handler: () -> ())
+        self.onClick = handler
+    end
+    -- === End Button Module ===
+
+
+    -- === Label Module ===
+    local Label = {}
+    Label.__index = Label
+    setmetatable(Label, BaseComponent)
+
+    local DEFAULT_LABEL_PROPERTIES = {
+        Size = UDim2.new(0, 200, 0, 30),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 1,
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        Text = "New Label",
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        TextSize = 16,
+        Font = Enum.Font.SourceSansBold,
+    }
+
+    function Label.new(parent: GuiObject, props: { [string]: any }): (any)
+        local mergedProps = {}
+        for k, v in pairs(DEFAULT_LABEL_PROPERTIES) do mergedProps[k] = v end
+        for k, v in pairs(props) do mergedProps[k] = v end
+
+        local self = BaseComponent.new(Enum.Class.TextLabel, parent, mergedProps)
+        setmetatable(self, Label)
+
+        return self
+    end
+    -- === End Label Module ===
+
+
+    -- === Toggle Module ===
+    local Toggle = {}
+    Toggle.__index = Toggle
+    setmetatable(Toggle, BaseComponent)
+
+    local DEFAULT_TOGGLE_PROPERTIES = {
+        Size = UDim2.new(0, 50, 0, 25),
+        BackgroundColor3 = Color3.fromRGB(80, 80, 80),
+        OnColor = Color3.fromRGB(75, 150, 255),
+        InitialState = false,
+        CornerRadius = UDim.new(0.5, 0),
+        StrokeColor = Color3.fromRGB(40, 40, 40),
+        StrokeThickness = 1,
+        Text = "Toggle",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        Font = Enum.Font.SourceSans,
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        Padding = UDim.new(0, 5),
+    }
+
+    function Toggle.new(parent: GuiObject, props: { [string]: any }): (any)
+        local mergedProps = {}
+        for k, v in pairs(DEFAULT_TOGGLE_PROPERTIES) do mergedProps[k] = v end
+        for k, v in pairs(props) do mergedProps[k] = v end
+
+        local self = BaseComponent.new(Enum.Class.TextButton, parent, mergedProps)
+        setmetatable(self, Toggle)
+
+        local toggleButton = self._instance
+        toggleButton.Text = ""
+        toggleButton.AutoButtonColor = false
+
+        local track = Instance.new("Frame")
+        track.Name = "ToggleTrack"
+        track.Size = UDim2.new(1, 0, 1, 0)
+        track.Position = UDim2.new(0,0,0,0)
+        track.BackgroundColor3 = mergedProps.BackgroundColor3
+        track.BackgroundTransparency = 0
+        track.Parent = toggleButton
+
+        local trackCorner = Instance.new("UICorner")
+        trackCorner.CornerRadius = mergedProps.CornerRadius
+        trackCorner.Parent = track
+
+        local handle = Instance.new("Frame")
+        handle.Name = "ToggleHandle"
+        handle.Size = UDim2.new(0.4, 0, 0.8, 0)
+        handle.Position = UDim2.new(0, 0, 0.1, 0)
+        handle.BackgroundColor3 = Color3.fromRGB(255, 255, 255)
+        handle.Parent = track
+
+        local handleCorner = Instance.new("UICorner")
+        handleCorner.CornerRadius = UDim.new(0.5, 0)
+        handleCorner.Parent = handle
+
+        local label = Label.new(toggleButton, {
+            Text = mergedProps.Text,
+            Size = UDim2.new(1, -mergedProps.Size.X.Offset * 0.6, 1, 0),
+            Position = UDim2.new(0.6, 0, 0, 0),
+            TextColor3 = mergedProps.TextColor3,
+            Font = mergedProps.Font,
+            TextSize = mergedProps.TextSize,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            BackgroundTransparency = 1,
+        })
+        label:GetInstance().ZIndex = toggleButton.ZIndex + 1
+
+        self._state = mergedProps.InitialState
+        self._track = track
+        self._handle = handle
+        self._onColor = mergedProps.OnColor
+        self._offColor = mergedProps.BackgroundColor3
+
+        local function updateVisualState()
+            local targetXPosition = self._state and (1 - handle.Size.X.Scale) or 0
+            local targetColor = self._state and self._onColor or self._offColor
+
+            TweenService:Create(handle, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                Position = UDim2.new(targetXPosition, 0, 0.1, 0)
+            }):Play()
+
+            TweenService:Create(track, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundColor3 = targetColor
+            }):Play()
+        end
+
+        updateVisualState()
+
+        toggleButton.MouseButton1Click:Connect(function()
+            self._state = not self._state
+            updateVisualState()
+            if self.onChanged then
+                self.onChanged(self._state)
+            end
+        end)
+
+        return self
+    end
+
+    function Toggle:GetState(): boolean
+        return self._state
+    end
+
+    function Toggle:SetState(newState: boolean)
+        if self._state ~= newState then
+            self._state = newState
+            local func = self.onChanged
+            if func then
+                self.onChanged = nil
+                func(self._state)
+                self.onChanged = func
+            end
+            local track = self._instance:FindFirstChild("ToggleTrack")
+            local handle = track:FindFirstChild("ToggleHandle")
+            local targetXPosition = self._state and (1 - handle.Size.X.Scale) or 0
+            local targetColor = self._state and self._onColor or self._offColor
+            
+            handle.Position = UDim2.new(targetXPosition, 0, 0.1, 0)
+            track.BackgroundColor3 = targetColor
+        end
+    end
+
+    function Toggle:OnChanged(handler: (boolean) -> ())
+        self.onChanged = handler
+    end
+    -- === End Toggle Module ===
+
+
+    -- === TextBox Module ===
+    local TextBox = {}
+    TextBox.__index = TextBox
+    setmetatable(TextBox, BaseComponent)
+
+    local DEFAULT_TEXTBOX_PROPERTIES = {
+        Size = UDim2.new(0, 200, 0, 30),
+        BackgroundColor3 = Color3.fromRGB(50, 50, 50),
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        Text = "Enter text...",
+        Font = Enum.Font.SourceSans,
+        TextSize = 16,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        ClearTextOnFocus = true,
+        CornerRadius = UDim.new(0, 6),
+        StrokeColor = Color3.fromRGB(40, 40, 40),
+        StrokeThickness = 1,
+        Padding = UDim.new(0, 5),
+    }
+
+    function TextBox.new(parent: GuiObject, props: { [string]: any }): (any)
+        local mergedProps = {}
+        for k, v in pairs(DEFAULT_TEXTBOX_PROPERTIES) do mergedProps[k] = v end
+        for k, v in pairs(props) do mergedProps[k] = v end
+
+        local self = BaseComponent.new(Enum.Class.TextBox, parent, mergedProps)
+        setmetatable(self, TextBox)
+
+        local textBoxInstance = self._instance
+
+        textBoxInstance.Changed:Connect(function(property)
+            if property == "Text" and self.onTextChanged then
+                self.onTextChanged(textBoxInstance.Text)
+            end
+        end)
+
+        textBoxInstance.FocusLost:Connect(function(enterPressed)
+            if self.onFocusLost then
+                self.onFocusLost(enterPressed)
+            end
+            if enterPressed and self.onEnterPressed then
+                self.onEnterPressed(textBoxInstance.Text)
+            end
+        end)
+
+        textBoxInstance.Focused:Connect(function()
+            if self.onFocused then
+                self.onFocused()
+            end
+        end)
+
+        return self
+    end
+
+    function TextBox:GetText(): string
+        return self._instance.Text
+    end
+
+    function TextBox:OnTextChanged(handler: (text: string) -> ())
+        self.onTextChanged = handler
+    end
+
+    function TextBox:OnFocusLost(handler: (enterPressed: boolean) -> ())
+        self.onFocusLost = handler
+    end
+
+    function TextBox:OnEnterPressed(handler: (text: string) -> ())
+        self.onEnterPressed = handler
+    end
+
+    function TextBox:OnFocused(handler: () -> ())
+        self.onFocused = handler
+    end
+    -- === End TextBox Module ===
+
+
+    -- === TabController Module ===
+    local TabController = {}
+    TabController.__index = TabController
+    setmetatable(TabController, BaseComponent)
+
+    local DEFAULT_TAB_CONTROLLER_PROPERTIES = {
+        Size = UDim2.new(1, 0, 1, 0),
+        TabButtonHeight = 35,
+        TabButtonSpacing = 5,
+        TabButtonBackgroundColor3 = Color3.fromRGB(50, 50, 50),
+        TabButtonActiveColor3 = Color3.fromRGB(75, 150, 255),
+        TabButtonTextColor3 = Color3.fromRGB(200, 200, 200),
+        TabButtonActiveTextColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+        CornerRadius = UDim.new(0, 8),
+        StrokeColor = Color3.fromRGB(20, 20, 20),
+        StrokeThickness = 1,
+        Padding = UDim.new(0, 10),
+        TextSize = 16,
+        Font = Enum.Font.SourceSansBold,
+        IconSize = UDim2.new(0, 20, 0, 20),
+        IconPadding = 5,
+    }
+
+    function TabController.new(parent: GuiObject, props: { [string]: any }): (any)
+        local mergedProps = {}
+        for k, v in pairs(DEFAULT_TAB_CONTROLLER_PROPERTIES) do mergedProps[k] = v end
+        for k, v in pairs(props) do mergedProps[k] = v end
+
+        local self = BaseComponent.new(Enum.Class.Frame, parent, mergedProps)
+        setmetatable(self, TabController)
+
+        local mainFrame = self._instance
+        mainFrame.ClipsDescendants = true
+
+        local tabButtonsFrameProps = {
+            Size = UDim2.new(1, 0, 0, mergedProps.TabButtonHeight),
+            Position = UDim2.new(0, 0, 0, 0),
+            BackgroundColor3 = Color3.fromRGB(25, 25, 25),
+            BackgroundTransparency = 0,
+            BorderSizePixel = 0,
+            ZIndex = mainFrame.ZIndex + 1,
+            CornerRadius = mergedProps.CornerRadius,
+            StrokeColor = mergedProps.StrokeColor,
+            StrokeThickness = mergedProps.StrokeThickness,
+        }
+        local tabButtonsFrame = BaseComponent.new(Enum.Class.Frame, mainFrame, tabButtonsFrameProps)
+        self._tabButtonsFrame = tabButtonsFrame:GetInstance()
+
+        local tabButtonLayout = Instance.new("UIListLayout")
+        tabButtonLayout.FillDirection = Enum.FillDirection.Horizontal
+        tabButtonLayout.HorizontalAlignment = Enum.HorizontalAlignment.Left
+        tabButtonLayout.VerticalAlignment = Enum.VerticalAlignment.Center
+        tabButtonLayout.Padding = UDim.new(0, mergedProps.TabButtonSpacing)
+        tabButtonLayout.Parent = self._tabButtonsFrame
+
+        local buttonFramePadding = Instance.new("UIPadding")
+        buttonFramePadding.PaddingLeft = UDim.new(0, mergedProps.TabButtonSpacing)
+        buttonFramePadding.PaddingRight = UDim.new(0, mergedProps.TabButtonSpacing)
+        buttonFramePadding.Parent = self._tabButtonsFrame
+
+        local contentFrameProps = {
+            Size = UDim2.new(1, 0, 1, -mergedProps.TabButtonHeight),
+            Position = UDim2.new(0, 0, 0, mergedProps.TabButtonHeight),
+            BackgroundColor3 = mergedProps.BackgroundColor3,
+            BackgroundTransparency = 0,
+            BorderSizePixel = 0,
+            ZIndex = mainFrame.ZIndex,
+            Padding = mergedProps.Padding,
+        }
+        local contentFrame = BaseComponent.new(Enum.Class.Frame, mainFrame, contentFrameProps)
+        self._contentFrame = contentFrame:GetInstance()
+
+        self._tabs = {}
+        self._activeTabName = nil
+        self._mergedProps = mergedProps
+
+        return self
+    end
+
+    function TabController:AddTab(tabName: string, iconAssetId: number | nil): GuiObject
+        if self._tabs[tabName] then
+            warn("Tab with name '" .. tabName .. "' already exists!")
+            return self._tabs[tabName].content
+        end
+
+        local tabButton = Instance.new("TextButton")
+        tabButton.Name = tabName .. "TabButton"
+        tabButton.Size = UDim2.new(0, 0, 1, 0)
+        tabButton.BackgroundColor3 = self._mergedProps.TabButtonBackgroundColor3
+        tabButton.TextColor3 = self._mergedProps.TabButtonTextColor3
+        tabButton.BackgroundTransparency = 0
+        tabButton.BorderSizePixel = 0
+        tabButton.AutoBu            
 
 
 
