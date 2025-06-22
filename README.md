@@ -205,3 +205,15 @@ myTextBox:OnEnterPressed(function(text)
 end)
 
 print("Library Booter loaded UI from Asset ID and created example UI!")
+
+
+
+
+creating a button:
+local Plr, UI = game:GetService("Players"), require(game.StarterPlayer.StarterPlayerScripts.UI.UI)
+local SG = Plr.LocalPlayer:WaitForChild("PlayerGui"):FindFirstChild("MyCustomUIScreen") or Instance.new("ScreenGui")
+if not SG.Parent then SG.Name="MyCustomUIScreen"; SG.DisplayOrder=10; SG.ResetOnSpawn=false; SG.Parent=Plr.LocalPlayer.PlayerGui end UI.init(SG)
+local myWindow = UI.new("Window", nil, {Title="Button Tab Demo", Size=UDim2.new(0,250,0,150), Position=UDim2.new(0.5,-125,0.5,-75)})
+local btnTabC = myWindow:CreateTab("Button", 3899201970); local btn = UI.new("Button", btnTabC, {Text="Click Me!", Size=UDim2.new(0.6,0,0,40), Position=UDim2.new(0.5,-75,0.5,-20)}); btn:OnClick(function()
+--the function when you press the button.
+end)
